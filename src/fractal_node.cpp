@@ -1,19 +1,30 @@
+#include <chrono>
 #include <cmath>
 
-#include "ros/ros.h"
-#include "nav_msgs/OccupancyGrid.h"
-#include "costmap_2d/costmap_2d.h"
-
-#include "polynomial.h"
 #include "complex_point.h"
+#include "costmap_2d/costmap_2d.h"
+#include "nav_msgs/OccupancyGrid.h"
+#include "polynomial.h"
+#include "ros/ros.h"
 
+class SimpleTimer {
+  std::string name_;
+  std::chrono::steady_clock::time_point start_time_;
 
-template<typename T>
+ public:
+  SimpleTimer(const std::string& name) : name_(name) { start_time_ = std::chrono::steady_clock::now(); }
+  ~SimpleTimer() {
+    std::chrono::duration<double> time_cost = std::chrono::steady_clock::now() - start_time_;
+    std::cout << "[Timer] Time used in " << name_ << " is: " << time_cost.count() << std::endl;
+  }
+};
+
+template <typename T>
 size_t GetClosestRootId(const Poly<T>& p, const T& cur_point) {
   double min_dist = 1e6;
   size_t min_id = 0;
   auto roots = p.GetRoots();
-  for (size_t i = 0; i < roots.size(); ++i){
+  for (size_t i = 0; i < roots.size(); ++i) {
     double cur_dist = Dist(roots.at(i), cur_point);
     if (cur_dist < min_dist) {
       min_dist = cur_dist;
@@ -47,7 +58,7 @@ int main(int argc, char** argv) {
   p.AddRoot(d);
   p.AddRoot(e);
 
-  std::vector<u_char> colors{0, 20, 40, 60, 80};
+  std::vector<u_char> colors{10, 30, 50, 70, 90};
 
   nav_msgs::OccupancyGrid map;
   map.header.frame_id = "world";
@@ -55,27 +66,31 @@ int main(int argc, char** argv) {
   map.info.height = 1000;
   map.info.width = 1000;
   map.info.resolution = 0.01;
-  map.info.origin.position.x = - static_cast<double>(map.info.height) * map.info.resolution / 2;
-  map.info.origin.position.y = - static_cast<double>(map.info.width) * map.info.resolution / 2;
+  map.info.origin.position.x = -static_cast<double>(map.info.height) * map.info.resolution / 2;
+  map.info.origin.position.y = -static_cast<double>(map.info.width) * map.info.resolution / 2;
 
-  costmap_2d::Costmap2D dummy_map(map.info.height, map.info.width, map.info.resolution, map.info.origin.position.x, map.info.origin.position.y);
+  costmap_2d::Costmap2D dummy_map(map.info.height, map.info.width, map.info.resolution, map.info.origin.position.x,
+                                  map.info.origin.position.y);
 
   map.data.resize(map.info.height * map.info.width);
-  for (size_t i = 0; i < map.info.height; ++i) {
-    for (size_t j = 0; j < map.info.width; ++j) {
-      double wx, wy;
-      dummy_map.mapToWorld(i, j, wx, wy);
-      ComplexPoint cur_p(wx, wy);
-      for (size_t k = 0; k < iter; ++k) {
-        auto p_val = p.Eval(cur_p);
-        auto dp_val = p.EvalDerivate(cur_p);
-        if (dp_val.abs() < 1e-6) {
-          break;
+  {
+    SimpleTimer timer("fractal");
+    for (size_t i = 0; i < map.info.height; ++i) {
+      for (size_t j = 0; j < map.info.width; ++j) {
+        double wx, wy;
+        dummy_map.mapToWorld(i, j, wx, wy);
+        ComplexPoint cur_p(wx, wy);
+        for (size_t k = 0; k < iter; ++k) {
+          auto p_val = p.Eval(cur_p);
+          auto dp_val = p.EvalDerivateLoop(cur_p);
+          if (dp_val.abs() < 1e-6) {
+            break;
+          }
+          cur_p = cur_p - (p_val / dp_val);
         }
-        cur_p = cur_p - (p_val / dp_val);
+        size_t min_id = GetClosestRootId(p, cur_p);
+        map.data[i * map.info.width + j] = colors.at(min_id);
       }
-      size_t min_id = GetClosestRootId(p, cur_p);
-      map.data[i * map.info.width + j] = colors.at(min_id);
     }
   }
 
