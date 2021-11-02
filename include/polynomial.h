@@ -21,7 +21,24 @@ class Poly {
     }
     return res;
   }
+  // if start_id is out of range, Unit<T>() will be returned
+  T Eval(const T& val, size_t start_id) const {
+    T res = Unit<T>();
+    for (size_t i = start_id; i < roots_.size(); ++i) {
+      res = res * (val - roots_[i]);
+    }
+    return res;
+  }
+  T Eval(const T& val, size_t start_id, size_t end_id) const {
+    T res = Unit<T>();
+    for (size_t i = start_id; i < end_id && i < roots_.size(); ++i) {
+      res = res * (val - roots_[i]);
+    }
+    return res;
+  }
+
   size_t GetOrder() const { return roots_.size(); }
+
   T EvalDerivate(const T& val) const {
     if (roots_.empty()) {
       return Zero<T>();
@@ -44,10 +61,8 @@ class Poly {
       return Unit<T>();
     }
     T res = Unit<T>();
-    Poly<T> sub_poly(roots_.size());
     for (size_t i = 0; i + 1 < roots_.size(); ++i) {
-      sub_poly.AddRoot(roots_.at(i));
-      res = (val - roots_.at(i + 1)) * res + sub_poly.Eval(val);
+      res = (val - roots_.at(i + 1)) * res + Eval(val, 0, i + 1);
     }
     return res;
   }
