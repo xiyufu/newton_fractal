@@ -3,6 +3,7 @@ project(fractal)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
+add_compile_options(-pg)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -148,6 +149,7 @@ add_executable(${PROJECT_NAME}_node src/fractal_node.cpp src/complex_point.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
+set(catkin_LIBRARIES ${catkin_LIBRARIES} -pg)
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
 )

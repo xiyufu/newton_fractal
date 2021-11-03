@@ -1,0 +1,6 @@
+<launch>
+
+  <env name="GMON_OUT_PREFIX" value="fractal_node" />
+  <node pkg="fractal" name="fractal_node" type="fractal_node" output="screen" />
+
+</launch>
